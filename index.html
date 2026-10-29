@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>BLACK TEAM · Control</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css?v=5">
+</head>
+<body>
+  <!-- Sign in -->
+  <main id="login" class="login" hidden>
+    <div class="login-glow" aria-hidden="true"></div>
+    <form id="login-form" class="login-card" autocomplete="on">
+      <img src="logo.svg" alt="" class="login-logo">
+      <h1>BLACK TEAM</h1>
+      <p class="muted">Anti-cheat control center</p>
+      <label id="server-field" hidden>Server address<input name="server" type="url" placeholder="https://xxxx.users.cfx.re/black_team_development" spellcheck="false" maxlength="200"></label>
+      <label>Username<input name="username" autocomplete="username" required maxlength="32" spellcheck="false"></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required maxlength="256"></label>
+      <button class="btn primary block" type="submit">Sign in</button>
+      <p id="login-error" class="form-error" role="alert"></p>
+    </form>
+  </main>
+
+  <!-- App -->
+  <div id="app" class="app" hidden>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img src="logo.svg" alt="">
+        <div><strong>BLACK TEAM</strong><span>Control center</span></div>
+      </div>
+      <div class="server-pill" id="server-pill"><i class="dot"></i><div><b id="server-name">Server</b><small id="server-state">Connecting…</small></div></div>
+      <nav id="nav"></nav>
+      <div class="sidebar-foot">
+        <div class="user"><span class="avatar" id="avatar">OW</span><div><b id="user-name">owner</b><small id="user-role">Owner</small></div></div>
+        <button class="icon-btn" id="logout" title="Sign out" aria-label="Sign out">⏻</button>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menu-btn" aria-label="Menu">☰</button>
+        <div><small class="crumb" id="crumb">Control center</small><h2 id="page-title">Overview</h2></div>
+        <div class="top-actions">
+          <span class="live-tag" id="live-tag"><i></i>LIVE</span>
+          <button class="btn ghost" id="refresh">↻ Refresh</button>
+        </div>
+      </header>
+      <section id="view" class="view"></section>
+    </div>
+  </div>
+
+  <div id="drawer" class="drawer" hidden></div>
+  <div id="modal" class="modal" hidden></div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script src="config.js?v=5"></script>
+  <script src="app.js?v=5"></script>
+</body>
+</html>
