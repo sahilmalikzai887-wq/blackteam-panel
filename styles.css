@@ -88,6 +88,8 @@ select.input { padding-right: 30px; appearance: none; background-image: linear-g
 .login-card input:focus { border-color: rgba(255, 45, 61, .6); box-shadow: 0 0 0 4px rgba(255, 45, 61, .12); }
 .login-card .btn { height: 46px; margin-top: 6px; font-size: 15px; }
 .form-error { min-height: 20px; margin: 0; color: #ff7c86; font-size: 13px; }
+.link-btn { background: none; border: 0; color: var(--faint); font-size: 12px; cursor: pointer; padding: 2px; justify-self: center; }
+.link-btn:hover { color: var(--muted); text-decoration: underline; }
 
 /* ---------- layout ---------- */
 .app { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }

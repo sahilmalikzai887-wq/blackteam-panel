@@ -49,7 +49,9 @@ const store = {
   get(k, session) { try { return (session ? sessionStorage : localStorage).getItem(k) || ''; } catch (_) { return ''; } },
   set(k, v, session) { try { (session ? sessionStorage : localStorage)[v ? 'setItem' : 'removeItem'](k, v); } catch (_) { /* private mode */ } },
 };
-const serverBase = () => store.get('bt_server').replace(/\/+$/, '');
+// A server address built into config.js (BT_SERVER) hides the address box.
+const FIXED_SERVER = String(window.BT_SERVER || '').trim().replace(/\/+$/, '');
+const serverBase = () => FIXED_SERVER || store.get('bt_server').replace(/\/+$/, '');
 
 async function request(url, options = {}, isLogin = false) {
   let res;
@@ -81,7 +83,7 @@ const act = (action, payload = {}) => STATIC
 const getSession = () => STATIC ? panelCall('session') : api('/api/session');
 async function doLogin(server, username, password) {
   if (!STATIC) return api('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-  const base = String(server || '').trim().replace(/\/+$/, '');
+  const base = FIXED_SERVER || String(server || '').trim().replace(/\/+$/, '');
   if (!/^(https:\/\/[^\s/]+|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)(\/.*)?$/.test(base)) throw new Error('Enter your server address, e.g. https://xxxx.users.cfx.re/black_team_development');
   const creds = btoa(unescape(encodeURIComponent(`${username}:${password}`)));
   const body = await request(`${base}/panel/login`, { headers: { Accept: 'application/json', Authorization: `Basic ${creds}` } }, true);
@@ -141,18 +143,30 @@ function errorBox(e) {
 function showLogin() {
   clearTimers();
   $('#app').hidden = true; $('#login').hidden = false;
-  if (STATIC) {
-    $('#server-field').hidden = false;
+  if (STATIC && !FIXED_SERVER) {
+    // The address box stays hidden behind "Server settings"; it is only
+    // needed once, then the browser remembers it.
+    $('#server-toggle').hidden = false;
     const input = $('#login-form input[name=server]');
-    input.required = true;
     if (!input.value) input.value = serverBase();
   }
-  setTimeout(() => $(`#login-form input[name=${STATIC && !serverBase() ? 'server' : 'username'}]`).focus(), 50);
+  setTimeout(() => $('#login-form input[name=username]').focus(), 50);
 }
+function showServerField(message) {
+  $('#server-field').hidden = false;
+  $('#server-toggle').hidden = true;
+  if (message) $('#login-error').textContent = message;
+  $('#login-form input[name=server]').focus();
+}
+$('#server-toggle').addEventListener('click', () => showServerField());
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
   const btn = e.target.querySelector('button'); btn.disabled = true; $('#login-error').textContent = '';
+  if (STATIC && !FIXED_SERVER && !String(f.get('server') || '').trim()) {
+    btn.disabled = false;
+    return showServerField('First time only: enter your server address (type web_baseUrl in your server console to find it).');
+  }
   try {
     await doLogin(f.get('server'), f.get('username'), f.get('password'));
     e.target.querySelector('input[name=password]').value = '';
