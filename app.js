@@ -51,7 +51,27 @@ const store = {
 };
 // A server address built into config.js (BT_SERVER) hides the address box.
 const FIXED_SERVER = String(window.BT_SERVER || '').trim().replace(/\/+$/, '');
-const serverBase = () => FIXED_SERVER || store.get('bt_server').replace(/\/+$/, '');
+// Otherwise the FiveM server publishes its address to server.json in this
+// GitHub repository (GitHubPublish in server_config.lua) and we read it here.
+let discoveredServer = '';
+const discovery = (async () => {
+  if (!STATIC || FIXED_SERVER) return;
+  const owner = location.hostname.endsWith('.github.io') ? location.hostname.split('.')[0] : '';
+  const repo = location.pathname.split('/').filter(Boolean)[0] || '';
+  const sources = [
+    ...(owner && repo ? [`https://raw.githubusercontent.com/${owner}/${repo}/main/server.json?t=${Date.now()}`] : []),
+    `server.json?t=${Date.now()}`,
+  ];
+  for (const src of sources) {
+    try {
+      const r = await fetch(src, { cache: 'no-store' });
+      if (!r.ok) continue;
+      const info = await r.json();
+      if (typeof info.server === 'string' && /^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1)[:/])/.test(info.server)) { discoveredServer = info.server.replace(/\/+$/, ''); return; }
+    } catch (_) { /* try next source */ }
+  }
+})();
+const serverBase = () => FIXED_SERVER || discoveredServer || store.get('bt_server').replace(/\/+$/, '');
 
 async function request(url, options = {}, isLogin = false) {
   let res;
@@ -83,7 +103,8 @@ const act = (action, payload = {}) => STATIC
 const getSession = () => STATIC ? panelCall('session') : api('/api/session');
 async function doLogin(server, username, password) {
   if (!STATIC) return api('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-  const base = FIXED_SERVER || String(server || '').trim().replace(/\/+$/, '');
+  const typed = String(server || '').trim().replace(/\/+$/, '');
+  const base = FIXED_SERVER || typed || discoveredServer;
   if (!/^(https:\/\/[^\s/]+|http:\/\/(localhost|127\.0\.0\.1)(:\d+)?)(\/.*)?$/.test(base)) throw new Error('Enter your server address, e.g. https://xxxx.users.cfx.re/black_team_development');
   const creds = btoa(unescape(encodeURIComponent(`${username}:${password}`)));
   const body = await request(`${base}/panel/login`, { headers: { Accept: 'application/json', Authorization: `Basic ${creds}` } }, true);
@@ -144,11 +165,10 @@ function showLogin() {
   clearTimers();
   $('#app').hidden = true; $('#login').hidden = false;
   if (STATIC && !FIXED_SERVER) {
-    // The address box stays hidden behind "Server settings"; it is only
-    // needed once, then the browser remembers it.
+    // Address comes from server.json; the manual box stays hidden behind
+    // "Server settings" for emergencies only.
     $('#server-toggle').hidden = false;
-    const input = $('#login-form input[name=server]');
-    if (!input.value) input.value = serverBase();
+    discovery.then(() => { if (discoveredServer) $('#server-toggle').hidden = true; });
   }
   setTimeout(() => $('#login-form input[name=username]').focus(), 50);
 }
@@ -163,10 +183,13 @@ $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
   const btn = e.target.querySelector('button'); btn.disabled = true; $('#login-error').textContent = '';
-  if (STATIC && !FIXED_SERVER && !String(f.get('server') || '').trim()) {
+  if (STATIC) await discovery;
+  if (STATIC && !FIXED_SERVER && !discoveredServer && !String(f.get('server') || '').trim() && !store.get('bt_server')) {
     btn.disabled = false;
-    return showServerField('First time only: enter your server address (type web_baseUrl in your server console to find it).');
+    $('#login-error').textContent = 'Your server has not connected to this panel yet. Start your FiveM server (GitHub token set in server_config.lua), wait 1–2 minutes, then reload this page.';
+    return;
   }
+  if (STATIC && !String(f.get('server') || '').trim() && !discoveredServer) f.set('server', store.get('bt_server'));
   try {
     await doLogin(f.get('server'), f.get('username'), f.get('password'));
     e.target.querySelector('input[name=password]').value = '';
